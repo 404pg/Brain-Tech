@@ -769,20 +769,183 @@
         /* COUNTER ANIMATION */
         .count-up { display: inline-block; }
 
-        /* RESPONSIVE */
+        /* RESPONSIVE - TABLET (768px - 1024px) */
+        @media (max-width: 1024px) {
+            nav { padding: 14px 25px; }
+            section { padding: 50px 25px; max-width: 100%; }
+            .services-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+            .projects-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+            .hero-title { font-size: clamp(2rem, 5vw, 4.5rem); }
+            #hero { padding: 80px 20px 40px; }
+        }
+
+        /* RESPONSIVE - MOBILE LANDSCAPE (768px) */
         @media (max-width: 900px) {
-            nav { padding: 14px 20px; }
+            nav { padding: 12px 15px; }
             .nav-links { display: none; }
-            section { padding: 60px 20px; }
+            section { padding: 40px 15px; }
+            .hero-title { font-size: clamp(1.8rem, 5vw, 3.5rem); }
+            .hero-sub { font-size: 0.95rem; }
             .why-grid { grid-template-columns: 1fr; }
             #why-canvas { height: 250px; }
             .footer-grid { grid-template-columns: 1fr 1fr; }
+            .process-track { flex-direction: column; align-items: center; }
             .process-track::before { display: none; }
-            .stats-strip { gap: 40px; }
+            .process-step { width: 100%; max-width: 200px; }
+            .stats-strip { gap: 30px; padding: 25px 15px; flex-direction: column; }
+            .contact-wrapper { grid-template-columns: 1fr; gap: 40px; }
+            #hero-canvas { min-height: 400px; }
         }
-        @media (max-width: 600px) {
-            .footer-grid { grid-template-columns: 1fr; }
-            .hero-title { font-size: 2rem; }
+
+        /* RESPONSIVE - SMALL MOBILE (480px - 768px) */
+        @media (max-width: 768px) {
+            :root { --cyan: #00C2D1; }
+            nav { padding: 10px 12px; position: fixed; }
+            .nav-logo { font-size: 1.1rem; }
+            .lang-btn { padding: 4px 12px; font-size: 0.7rem; }
+            
+            section { padding: 35px 12px; margin: 0; }
+            #hero { min-height: 85vh; padding: 70px 12px 40px; }
+            
+            .hero-title { font-size: clamp(1.5rem, 4vw, 2.8rem); }
+            .hero-sub { font-size: 0.9rem; max-width: 100%; }
+            .hero-eyebrow { font-size: 0.6rem; }
+            .hero-btns { flex-direction: column; gap: 12px; }
+            .btn-primary, .btn-outline { width: 100%; padding: 12px 20px; font-size: 0.9rem; }
+            
+            .section-title { font-size: clamp(1.4rem, 3.5vw, 2.2rem); }
+            .section-sub { font-size: 0.9rem; }
+            
+            .services-grid { grid-template-columns: 1fr; gap: 12px; }
+            .service-card { padding: 20px 16px; }
+            .service-icon { width: 50px; height: 50px; font-size: 1.5rem; }
+            .service-card h3 { font-size: 0.85rem; }
+            .service-card p { font-size: 0.8rem; }
+            
+            .projects-grid { grid-template-columns: 1fr; gap: 15px; }
+            .project-card { border-radius: 15px; }
+            .project-img { height: 180px; }
+            .project-title { font-size: 0.9rem; }
+            .project-desc { font-size: 0.8rem; }
+            
+            .process-step { min-width: 120px; }
+            .step-num { width: 50px; height: 50px; font-size: 1rem; }
+            .step-title { font-size: 0.75rem; }
+            .step-desc { font-size: 0.75rem; }
+            
+            .why-item { padding: 14px; gap: 12px; }
+            .why-icon { width: 36px; height: 36px; font-size: 0.9rem; }
+            .why-text h4 { font-size: 0.85rem; }
+            .why-text p { font-size: 0.8rem; }
+            
+            .stat-num { font-size: 1.8rem; }
+            .stat-label { font-size: 0.7rem; }
+            
+            #testimonials { padding: 40px 12px; }
+            .test-grid { grid-template-columns: 1fr; gap: 16px; }
+            .test-card { padding: 20px; }
+            .test-text { font-size: 0.85rem; }
+            
+            .form-group { margin-bottom: 16px; }
+            .form-group input, .form-group textarea { padding: 10px 12px; font-size: 0.9rem; }
+            .form-group label { font-size: 0.75rem; }
+            .form-group textarea { height: 100px; }
+            
+            .footer-grid { grid-template-columns: 1fr; gap: 25px; }
+            .footer-brand .logo-text { font-size: 1.2rem; }
+            .footer-col h4 { font-size: 0.7rem; }
+            .footer-col a { font-size: 0.85rem; }
+            
+            .contact-info { gap: 15px; }
+            .info-item { padding: 14px; }
+            .info-icon { width: 36px; height: 36px; }
+            
+            #cta h2 { font-size: clamp(1.5rem, 4vw, 2.5rem); }
+            #cta p { font-size: 0.95rem; }
+            #cta { padding: 60px 12px; }
+        }
+
+        /* RESPONSIVE - EXTRA SMALL (< 480px) */
+        @media (max-width: 480px) {
+            nav { padding: 8px 10px; gap: 10px; }
+            .nav-logo { font-size: 1rem; letter-spacing: 1px; }
+            .lang-btn { padding: 3px 10px; font-size: 0.65rem; }
+            
+            section { padding: 25px 10px; }
+            #hero { min-height: 80vh; padding: 60px 10px 35px; }
+            
+            .hero-title { font-size: clamp(1.2rem, 3.5vw, 2.2rem); line-height: 1.1; }
+            .hero-sub { font-size: 0.85rem; margin: 0 auto 30px; }
+            .hero-eyebrow { font-size: 0.55rem; margin-bottom: 12px; }
+            .hero-btns { gap: 10px; }
+            .btn-primary, .btn-outline { font-size: 0.85rem; padding: 10px 18px; }
+            
+            .section-title { font-size: clamp(1.2rem, 3vw, 1.8rem); margin-bottom: 12px; }
+            .section-tag { font-size: 0.6rem; margin-bottom: 8px; }
+            .section-sub { font-size: 0.85rem; line-height: 1.6; }
+            
+            .services-grid { gap: 10px; }
+            .service-card { padding: 16px 12px; }
+            .service-icon { width: 45px; height: 45px; font-size: 1.3rem; margin-bottom: 12px; }
+            .service-card h3 { font-size: 0.8rem; margin-bottom: 8px; }
+            .service-card p { font-size: 0.75rem; }
+            
+            .projects-grid { gap: 12px; }
+            .project-img { height: 160px; }
+            .project-body { padding: 14px 16px; }
+            .project-title { font-size: 0.85rem; }
+            .project-desc { font-size: 0.75rem; }
+            .project-tags { margin-bottom: 8px; }
+            .tag { font-size: 0.65rem; padding: 2px 8px; }
+            
+            .step-num { width: 45px; height: 45px; font-size: 0.95rem; }
+            .step-title { font-size: 0.7rem; }
+            .step-desc { font-size: 0.7rem; }
+            
+            .why-item { padding: 12px; gap: 10px; }
+            .why-icon { width: 32px; height: 32px; font-size: 0.85rem; }
+            .why-text h4 { font-size: 0.8rem; }
+            .why-text p { font-size: 0.75rem; }
+            
+            .stat-num { font-size: 1.5rem; }
+            .stat-label { font-size: 0.65rem; }
+            .stats-strip { padding: 20px 10px; gap: 20px; }
+            
+            .test-card { padding: 16px; }
+            .test-card::before { font-size: 3rem; }
+            .test-text { font-size: 0.8rem; line-height: 1.6; }
+            .test-author { font-size: 0.85rem; }
+            .test-role { font-size: 0.75rem; }
+            
+            .form-group { margin-bottom: 12px; }
+            .form-group input, .form-group textarea { padding: 9px 10px; font-size: 0.9rem; border-radius: 8px; }
+            .form-group label { font-size: 0.7rem; margin-bottom: 6px; }
+            .form-group textarea { height: 90px; }
+            
+            .footer-grid { gap: 20px; padding-bottom: 20px; }
+            .footer-brand .logo-text { font-size: 1rem; margin-bottom: 8px; }
+            .footer-brand p { font-size: 0.8rem; }
+            .footer-col h4 { font-size: 0.65rem; margin-bottom: 10px; }
+            .footer-col ul { gap: 8px; }
+            .footer-col a { font-size: 0.8rem; }
+            .footer-bottom { font-size: 0.75rem; padding-top: 16px; }
+            
+            .info-item { padding: 12px; gap: 10px; }
+            .info-icon { width: 32px; height: 32px; font-size: 0.9rem; }
+            .info-text span { font-size: 0.75rem; }
+            .info-text strong { font-size: 0.9rem; }
+            
+            #cta h2 { font-size: clamp(1.2rem, 3vw, 2rem); }
+            #cta p { font-size: 0.9rem; }
+            #cta { padding: 50px 10px; }
+            
+            .modal-box { padding: 30px 20px; border-radius: 16px; max-width: 90vw; }
+            .modal-icon { font-size: 2.5rem; margin-bottom: 12px; }
+            .modal-title { font-size: 1.1rem; }
+            .modal-desc { font-size: 0.9rem; }
+            .modal-btn { padding: 10px 24px; font-size: 0.9rem; }
+            
+            .scroll-hint { font-size: 0.7rem; }
         }
 
         /* CONTACT FORM */

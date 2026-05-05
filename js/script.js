@@ -228,7 +228,7 @@ window.addEventListener('load', () => {
 })();
 
 // ========== PROJECTS 3D PREVIEWS ==========
-const projectsData = [
+const defaultProjects = [
     { title:"PID Ball Balance Robot", tags:["AI","Raspberry Pi","Control"], desc:"روبوت يوازن الكرة باستخدام حساسات PID control مع شرح شامل وكود source كامل.", color:0x0044ff },
     { title:"Smart Home Hub", tags:["Arduino","IoT","PCB"], desc:"نظام منزل ذكي يعمل بالواي فاي وتحكم عبر تطبيق موبايل.", color:0x00aa44 },
     { title:"AI Face Recognition", tags:["AI Vision","OpenCV"], desc:"نظام تعرف على الوجوه باستخدام OpenCV وRaspberry Pi مع دقة 98%.", color:0xff6600 },
@@ -237,13 +237,42 @@ const projectsData = [
     { title:"Industrial Robot Arm", tags:["Servo","Arduino","6DOF"], desc:"ذراع روبوتية 6 محاور مع تحكم دقيق وإمكانية البرمجة الكاملة.", color:0x00C2D1 }
 ];
 
+// Get projects from admin panel or use defaults
+function getDisplayProjects() {
+    const adminProjects = localStorage.getItem('brainTechProjects');
+    if (adminProjects) {
+        try {
+            const projects = JSON.parse(adminProjects);
+            return projects.map(p => ({
+                title: p.title,
+                tags: p.tags || [],
+                desc: p.description || p.desc,
+                color: 0x00C2D1,
+                image: p.image
+            }));
+        } catch (e) {
+            console.log('Using default projects');
+            return defaultProjects;
+        }
+    }
+    return defaultProjects;
+}
+
+const projectsData = getDisplayProjects();
+
 const grid = document.getElementById('projectsGrid');
 projectsData.forEach((p, idx) => {
     const card = document.createElement('div');
     card.className = 'project-card reveal' + (idx%3===1?' reveal-delay-1':idx%3===2?' reveal-delay-2':'');
     const canvasId = 'proj-canvas-'+idx;
+    
+    // Use image if available, otherwise render 3D canvas
+    const imageHtml = p.image ? 
+        `<img src="${p.image}" alt="${p.title}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
+        `<canvas id="${canvasId}" class="project-canvas-3d"></canvas>`;
+    
     card.innerHTML = `
-        <div class="project-img"><canvas id="${canvasId}" class="project-canvas-3d"></canvas><div class="project-overlay"></div></div>
+        <div class="project-img">${imageHtml}<div class="project-overlay"></div></div>
         <div class="project-body">
             <div class="project-tags">${p.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
             <div class="project-title">${p.title}</div>
@@ -253,11 +282,12 @@ projectsData.forEach((p, idx) => {
     card.addEventListener('click', () => openModal(p));
     grid.appendChild(card);
 
-    // Init 3D per card
-    setTimeout(() => {
-        const c = document.getElementById(canvasId);
-        if(!c) return;
-        c.width = c.offsetWidth || 320; c.height = 200;
+    // Init 3D per card only if no image
+    if (!p.image) {
+        setTimeout(() => {
+            const c = document.getElementById(canvasId);
+            if(!c) return;
+            c.width = c.offsetWidth || 320; c.height = 200;
         const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
         renderer.setSize(c.width, 200);
         renderer.setClearColor(0x000000, 0);
@@ -287,15 +317,16 @@ projectsData.forEach((p, idx) => {
         orbitGeo.setAttribute('position',new THREE.BufferAttribute(orbitPos,3));
         scene.add(new THREE.Points(orbitGeo, new THREE.PointsMaterial({color:p.color,size:0.06,transparent:true,opacity:0.7})));
 
-        let hovered = false;
-        card.addEventListener('mouseenter',()=>hovered=true);
-        card.addEventListener('mouseleave',()=>hovered=false);
-        function anim(){ requestAnimationFrame(anim);
-            mesh.rotation.y += hovered?0.025:0.01;
-            mesh.rotation.x += hovered?0.015:0.005;
-            renderer.render(scene,cam); }
-        anim();
-    }, 100);
+            let hovered = false;
+            card.addEventListener('mouseenter',()=>hovered=true);
+            card.addEventListener('mouseleave',()=>hovered=false);
+            function anim(){ requestAnimationFrame(anim);
+                mesh.rotation.y += hovered?0.025:0.01;
+                mesh.rotation.x += hovered?0.015:0.005;
+                renderer.render(scene,cam); }
+            anim();
+        }, 100);
+    }
 });
 
 // ========== NAV SCROLL ==========
@@ -364,7 +395,7 @@ document.getElementById('scrollToProjects').onclick = () => document.getElementB
 document.getElementById('startBtn').onclick = () => document.getElementById('contact').scrollIntoView({behavior:'smooth'});
 
 // ========== CONTACT FORM → GOOGLE SHEETS ==========
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbyu96aaDcJzxo5RbBt_1PyK5tlR6jtlXa3Y5-CgOb116soUzNdTvTm4HxC55rcXVnoTzQ/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbw45JJ8PodB3xtvGa6eWQIn8IH_a6Ec1vyPqV5EyjMhnfTlzc0CsP3zOsO7pKDZpmyR/exec";
 
 function handleForm(e) {
     e.preventDefault();
@@ -374,6 +405,7 @@ function handleForm(e) {
     const status    = document.getElementById('formStatus');
 
     const name    = document.getElementById('f-name').value.trim();
+    const phone   = document.getElementById('f-phone').value.trim();
     const email   = document.getElementById('f-email').value.trim();
     const project = document.getElementById('f-project').value;
     const message = document.getElementById('f-message').value.trim();
@@ -384,7 +416,7 @@ function handleForm(e) {
     btnText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
     status.style.display = 'none';
 
-    const payload = JSON.stringify({ name, email, project, message });
+    const payload = JSON.stringify({ name, phone, email, project, message });
 
     fetch(SHEET_URL, {
         method: 'POST',
