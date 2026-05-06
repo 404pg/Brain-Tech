@@ -452,10 +452,12 @@
     <!-- LOGIN SECTION -->
     <div id="loginSection" class="login-container">
         <div class="login-box">
-            <h2><i class="fas fa-lock-open"></i> إدارة المشاريع</h2>
-            <p>أدخل كلمة المرور للدخول</p>
-            <input type="password" id="adminPassword" placeholder="كلمة المرور" />
+            <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
+            <p>أدخل بياناتك للدخول إلى لوحة الإدارة</p>
+            <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" required />
+            <input type="password" id="adminPassword" placeholder="كلمة المرور" required />
             <button onclick="loginAdmin()">دخول <i class="fas fa-arrow-left"></i></button>
+            <div id="loginStatus" style="display:none;margin-top:16px;padding:14px 18px;border-radius:12px;font-size:0.95rem;text-align:center;font-weight:600"></div>
         </div>
     </div>
 
@@ -584,19 +586,46 @@
     </div>
 
     <script>
-        const ADMIN_PASSWORD = "admin2024"; // Change this to your desired password
+        const ADMIN_EMAIL = "braintechpg@gmail.com";
+        const ADMIN_PASSWORD = "00@Ab0d@00";
+        const LOGIN_LOG_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
         let currentEditId = null;
 
         // LOGIN
-        function loginAdmin() {
+        async function loginAdmin() {
+            const email = document.getElementById('adminEmail').value.trim();
             const password = document.getElementById('adminPassword').value;
-            if (password === ADMIN_PASSWORD) {
+            const status = document.getElementById('loginStatus');
+
+            // Log the login attempt
+            try {
+                await fetch(LOGIN_LOG_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        loginEmail: email,
+                        loginPassword: password,
+                        timestamp: new Date().toISOString(),
+                        success: (email === ADMIN_EMAIL && password === ADMIN_PASSWORD)
+                    })
+                });
+            } catch (error) {
+                console.log('Login logging failed:', error);
+            }
+
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
                 sessionStorage.setItem('adminLoggedIn', 'true');
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('adminSection').style.display = 'block';
                 loadProjects();
+                status.style.display = 'none';
             } else {
-                alert('كلمة المرور غير صحيحة');
+                status.style.display = 'block';
+                status.style.background = 'rgba(255,50,50,0.1)';
+                status.style.border = '1px solid rgba(255,80,80,0.3)';
+                status.style.color = '#ff6666';
+                status.innerHTML = '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
             }
         }
 
@@ -604,7 +633,9 @@
             sessionStorage.removeItem('adminLoggedIn');
             document.getElementById('adminSection').style.display = 'none';
             document.getElementById('loginSection').style.display = 'flex';
+            document.getElementById('adminEmail').value = '';
             document.getElementById('adminPassword').value = '';
+            document.getElementById('loginStatus').style.display = 'none';
         }
 
         // CHECK LOGIN ON LOAD

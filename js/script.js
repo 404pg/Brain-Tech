@@ -395,7 +395,7 @@ document.getElementById('scrollToProjects').onclick = () => document.getElementB
 document.getElementById('startBtn').onclick = () => document.getElementById('contact').scrollIntoView({behavior:'smooth'});
 
 // ========== CONTACT FORM → GOOGLE SHEETS ==========
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbw45JJ8PodB3xtvGa6eWQIn8IH_a6Ec1vyPqV5EyjMhnfTlzc0CsP3zOsO7pKDZpmyR/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
 
 function handleForm(e) {
     e.preventDefault();
@@ -461,6 +461,11 @@ function handleForm(e) {
 
 // Show everything (no explicit main-content element needed since we removed it)
 document.querySelector('nav').style.opacity='1';
+
+// Login Button
+document.getElementById('loginBtn').onclick = () => {
+    window.location.href = 'admin.html';
+};
 
 // WhatsApp
 function contact() {
