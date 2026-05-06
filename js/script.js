@@ -467,6 +467,24 @@ document.getElementById('loginBtn').onclick = () => {
     window.location.href = 'admin.html';
 };
 
+// Hamburger Menu
+document.getElementById('hamburger').onclick = () => {
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.querySelector('.nav-links');
+    hamburger.classList.toggle('active');
+    navLinks.classList.toggle('active');
+};
+
+// Close mobile menu when clicking a link
+document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', () => {
+        const hamburger = document.getElementById('hamburger');
+        const navLinks = document.querySelector('.nav-links');
+        hamburger.classList.remove('active');
+        navLinks.classList.remove('active');
+    });
+});
+
 // WhatsApp
 function contact() {
     window.open("https://wa.me/9647700000000");
