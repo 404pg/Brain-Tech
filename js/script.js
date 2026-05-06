@@ -228,7 +228,7 @@ window.addEventListener('load', () => {
 })();
 
 // ========== PROJECTS 3D PREVIEWS ==========
-const API_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyNceMBhCeROYeIUzhKeP7moTfZrnSG6Pwi-cYQSUcDIYhaIMxAwxZsNFoMGViL5fUWhQ/exec";
 const defaultProjects = [
     { title:"PID Ball Balance Robot", tags:["AI","Raspberry Pi","Control"], desc:"روبوت يوازن الكرة باستخدام حساسات PID control مع شرح شامل وكود source كامل.", color:0x0044ff },
     { title:"Smart Home Hub", tags:["Arduino","IoT","PCB"], desc:"نظام منزل ذكي يعمل بالواي فاي وتحكم عبر تطبيق موبايل.", color:0x00aa44 },
@@ -426,7 +426,7 @@ document.getElementById('scrollToProjects').onclick = () => document.getElementB
 document.getElementById('startBtn').onclick = () => document.getElementById('contact').scrollIntoView({behavior:'smooth'});
 
 // ========== CONTACT FORM → GOOGLE SHEETS ==========
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyNceMBhCeROYeIUzhKeP7moTfZrnSG6Pwi-cYQSUcDIYhaIMxAwxZsNFoMGViL5fUWhQ/exec";
 
 function handleForm(e) {
     e.preventDefault();
