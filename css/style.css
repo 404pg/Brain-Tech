@@ -194,6 +194,29 @@
             align-items: center;
         }
 
+        /* PWA SPECIFIC STYLES */
+        @media all and (display-mode: standalone) {
+            /* Hide browser UI when running as PWA */
+            nav { padding-top: 10px; }
+            #hero { padding-top: 80px; }
+
+            /* Adjust for safe areas on mobile devices */
+            @supports (padding: max(0px)) {
+                nav { padding-top: max(10px, env(safe-area-inset-top)); }
+                #hero { padding-top: max(80px, calc(60px + env(safe-area-inset-top))); }
+            }
+        }
+
+        /* Hide install button on very small screens */
+        @media (max-width: 480px) {
+            #pwa-install-btn {
+                bottom: 10px !important;
+                left: 10px !important;
+                padding: 10px 16px !important;
+                font-size: 0.85rem !important;
+            }
+        }
+
         /* HERO */
         #hero {
             position: relative;

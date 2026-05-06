@@ -505,3 +505,166 @@ document.querySelectorAll("a[href^='#']").forEach(link => {
         });
     });
 });
+
+// ========== PWA SERVICE WORKER ==========
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('SW registered: ', registration);
+
+                // Check for updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New version available
+                            showUpdateNotification();
+                        }
+                    });
+                });
+            })
+            .catch(registrationError => {
+                console.log('SW registration failed: ', registrationError);
+            });
+    });
+}
+
+// PWA Update Notification
+function showUpdateNotification() {
+    // Create update notification
+    const updateDiv = document.createElement('div');
+    updateDiv.id = 'pwa-update';
+    updateDiv.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,194,209,0.9);
+            color: #000;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,194,209,0.3);
+            z-index: 10000;
+            font-family: 'Cairo', sans-serif;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        ">
+            <p style="margin: 0 0 10px 0; font-weight: 600;">تحديث جديد متاح!</p>
+            <button onclick="updatePWA()" style="
+                background: #000;
+                color: #00C2D1;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                margin-right: 10px;
+            ">تحديث الآن</button>
+            <button onclick="dismissUpdate()" style="
+                background: transparent;
+                color: #000;
+                border: 1px solid #000;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+            ">لاحقاً</button>
+        </div>
+    `;
+    document.body.appendChild(updateDiv);
+}
+
+function updatePWA() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        });
+    }
+    dismissUpdate();
+}
+
+function dismissUpdate() {
+    const updateDiv = document.getElementById('pwa-update');
+    if (updateDiv) {
+        updateDiv.remove();
+    }
+}
+
+// Listen for service worker updates
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data && event.data.type === 'SKIP_WAITING') {
+            window.location.reload();
+        }
+    });
+}
+
+// PWA Install Prompt
+let deferredPrompt;
+const installBtn = document.createElement('button');
+installBtn.id = 'pwa-install-btn';
+installBtn.innerHTML = '<i class="fas fa-download"></i> تثبيت التطبيق';
+installBtn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: linear-gradient(135deg, #00C2D1, #00a8b8);
+    color: #000;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,194,209,0.3);
+    z-index: 1000;
+    display: none;
+    transition: all 0.3s;
+`;
+
+installBtn.onmouseover = () => installBtn.style.transform = 'translateY(-2px)';
+installBtn.onmouseout = () => installBtn.style.transform = 'translateY(0)';
+
+installBtn.onclick = async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+        }
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+    }
+};
+
+document.body.appendChild(installBtn);
+
+// Listen for install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Show install button
+    installBtn.style.display = 'block';
+
+    // Hide after 30 seconds if not clicked
+    setTimeout(() => {
+        if (installBtn.style.display !== 'none') {
+            installBtn.style.display = 'none';
+        }
+    }, 30000);
+});
+
+// Hide install button if already installed
+window.addEventListener('appinstalled', () => {
+    installBtn.style.display = 'none';
+    console.log('PWA was installed');
+});
+
+// Check if running as PWA
+if (window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true) {
+    console.log('Running as PWA');
+    // Add PWA-specific styling or behavior here
+}
