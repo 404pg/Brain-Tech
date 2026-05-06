@@ -293,44 +293,50 @@ async function initProjects() {
     if (!hasImages) {
         setTimeout(() => {
             const c = document.getElementById(canvasId);
-            if(!c) return;
-            c.width = c.offsetWidth || 320; c.height = 200;
-        const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
-        renderer.setSize(c.width, 200);
-        renderer.setClearColor(0x000000, 0);
-        const scene = new THREE.Scene();
-        const cam = new THREE.PerspectiveCamera(45, c.width/200, 0.1, 100);
-        cam.position.z = 4;
-        scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-        const pl = new THREE.PointLight(p.color, 3, 15); pl.position.set(2,2,3); scene.add(pl);
-        const shapes = [
-            new THREE.IcosahedronGeometry(0.8, 0),
-            new THREE.OctahedronGeometry(0.8, 0),
-            new THREE.TorusGeometry(0.6, 0.25, 8, 12),
-            new THREE.BoxGeometry(1.2,1.2,1.2),
-            new THREE.ConeGeometry(0.7, 1.4, 6),
-            new THREE.CylinderGeometry(0.3, 0.7, 1.2, 8)
-        ];
-        const mat = new THREE.MeshStandardMaterial({ color: p.color, wireframe: true, emissive: p.color, emissiveIntensity: 0.3 });
-        const mesh = new THREE.Mesh(shapes[idx % shapes.length], mat);
-        scene.add(mesh);
-        // Orbit particles
-        const orbitGeo = new THREE.BufferGeometry();
-        const orbitPos = new Float32Array(50*3);
-        for(let i=0;i<50;i++){
-            const a=Math.random()*Math.PI*2, r=1.5+Math.random()*1;
-            orbitPos[i*3]=Math.cos(a)*r; orbitPos[i*3+1]=(Math.random()-0.5)*2; orbitPos[i*3+2]=Math.sin(a)*r;
-        }
-        orbitGeo.setAttribute('position',new THREE.BufferAttribute(orbitPos,3));
-        scene.add(new THREE.Points(orbitGeo, new THREE.PointsMaterial({color:p.color,size:0.06,transparent:true,opacity:0.7})));
-
+            if (!c) return;
+            c.width = c.offsetWidth || 320;
+            c.height = 200;
+            const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
+            renderer.setSize(c.width, 200);
+            renderer.setClearColor(0x000000, 0);
+            const scene = new THREE.Scene();
+            const cam = new THREE.PerspectiveCamera(45, c.width / 200, 0.1, 100);
+            cam.position.z = 4;
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            const pl = new THREE.PointLight(p.color, 3, 15);
+            pl.position.set(2, 2, 3);
+            scene.add(pl);
+            const shapes = [
+                new THREE.IcosahedronGeometry(0.8, 0),
+                new THREE.OctahedronGeometry(0.8, 0),
+                new THREE.TorusGeometry(0.6, 0.25, 8, 12),
+                new THREE.BoxGeometry(1.2, 1.2, 1.2),
+                new THREE.ConeGeometry(0.7, 1.4, 6),
+                new THREE.CylinderGeometry(0.3, 0.7, 1.2, 8)
+            ];
+            const mat = new THREE.MeshStandardMaterial({ color: p.color, wireframe: true, emissive: p.color, emissiveIntensity: 0.3 });
+            const mesh = new THREE.Mesh(shapes[idx % shapes.length], mat);
+            scene.add(mesh);
+            // Orbit particles
+            const orbitGeo = new THREE.BufferGeometry();
+            const orbitPos = new Float32Array(50 * 3);
+            for (let i = 0; i < 50; i++) {
+                const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 1;
+                orbitPos[i * 3] = Math.cos(a) * r;
+                orbitPos[i * 3 + 1] = (Math.random() - 0.5) * 2;
+                orbitPos[i * 3 + 2] = Math.sin(a) * r;
+            }
+            orbitGeo.setAttribute('position', new THREE.BufferAttribute(orbitPos, 3));
+            scene.add(new THREE.Points(orbitGeo, new THREE.PointsMaterial({ color: p.color, size: 0.06, transparent: true, opacity: 0.7 })));
             let hovered = false;
-            card.addEventListener('mouseenter',()=>hovered=true);
-            card.addEventListener('mouseleave',()=>hovered=false);
-            function anim(){ requestAnimationFrame(anim);
-                mesh.rotation.y += hovered?0.025:0.01;
-                mesh.rotation.x += hovered?0.015:0.005;
-                renderer.render(scene,cam); }
+            card.addEventListener('mouseenter', () => hovered = true);
+            card.addEventListener('mouseleave', () => hovered = false);
+            function anim() {
+                requestAnimationFrame(anim);
+                mesh.rotation.y += hovered ? 0.025 : 0.01;
+                mesh.rotation.x += hovered ? 0.015 : 0.005;
+                renderer.render(scene, cam);
+            }
             anim();
         }, 100);
     });
