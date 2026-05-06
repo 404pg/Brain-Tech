@@ -248,7 +248,7 @@ function getDisplayProjects() {
                 tags: p.tags || [],
                 desc: p.description || p.desc,
                 color: 0x00C2D1,
-                image: p.image
+                images: p.images || (p.image ? [p.image] : [])
             }));
         } catch (e) {
             console.log('Using default projects');
@@ -267,8 +267,10 @@ projectsData.forEach((p, idx) => {
     const canvasId = 'proj-canvas-'+idx;
     
     // Use image if available, otherwise render 3D canvas
-    const imageHtml = p.image ? 
-        `<img src="${p.image}" alt="${p.title}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
+    const images = p.images || (p.image ? [p.image] : []);
+    const hasImages = images.length > 0;
+    const imageHtml = hasImages ? 
+        `<img src="${images[0]}" alt="${p.title}" style="width:100%; height:100%; object-fit:cover; display:block;">` :
         `<canvas id="${canvasId}" class="project-canvas-3d"></canvas>`;
     
     card.innerHTML = `
@@ -283,7 +285,7 @@ projectsData.forEach((p, idx) => {
     grid.appendChild(card);
 
     // Init 3D per card only if no image
-    if (!p.image) {
+    if (!hasImages) {
         setTimeout(() => {
             const c = document.getElementById(canvasId);
             if(!c) return;
@@ -363,6 +365,16 @@ function openModal(p) {
     document.getElementById('modalTitle').textContent = p.title;
     document.getElementById('modalDesc').textContent = p.desc;
     document.getElementById('modalTags').innerHTML = p.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+    
+    // Display images
+    const imagesContainer = document.getElementById('modalImages');
+    const images = p.images || (p.image ? [p.image] : []);
+    if (images.length > 0) {
+        imagesContainer.innerHTML = images.map(img => `<img src="${img}" alt="${p.title}">`).join('');
+    } else {
+        imagesContainer.innerHTML = '';
+    }
+    
     document.getElementById('modal').classList.add('open');
 }
 document.getElementById('closeModal').onclick = () => document.getElementById('modal').classList.remove('open');
