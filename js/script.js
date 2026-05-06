@@ -228,6 +228,7 @@ window.addEventListener('load', () => {
 })();
 
 // ========== PROJECTS 3D PREVIEWS ==========
+const API_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
 const defaultProjects = [
     { title:"PID Ball Balance Robot", tags:["AI","Raspberry Pi","Control"], desc:"روبوت يوازن الكرة باستخدام حساسات PID control مع شرح شامل وكود source كامل.", color:0x0044ff },
     { title:"Smart Home Hub", tags:["Arduino","IoT","PCB"], desc:"نظام منزل ذكي يعمل بالواي فاي وتحكم عبر تطبيق موبايل.", color:0x00aa44 },
@@ -240,7 +241,7 @@ const defaultProjects = [
 // Get projects from admin panel or use defaults
 async function getDisplayProjects() {
     try {
-        const response = await fetch('https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec', {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'loadProjects' })
