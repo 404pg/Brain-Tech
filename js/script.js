@@ -238,30 +238,35 @@ const defaultProjects = [
 ];
 
 // Get projects from admin panel or use defaults
-function getDisplayProjects() {
-    const adminProjects = localStorage.getItem('brainTechProjects');
-    if (adminProjects) {
-        try {
-            const projects = JSON.parse(adminProjects);
-            return projects.map(p => ({
+async function getDisplayProjects() {
+    try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'loadProjects' })
+        });
+        const data = await response.json();
+        if (data.result === 'success' && data.projects.length > 0) {
+            return data.projects.map(p => ({
                 title: p.title,
                 tags: p.tags || [],
                 desc: p.description || p.desc,
                 color: 0x00C2D1,
                 images: p.images || (p.image ? [p.image] : [])
             }));
-        } catch (e) {
-            console.log('Using default projects');
-            return defaultProjects;
         }
+    } catch (e) {
+        console.log('Failed to load projects from API, using defaults:', e);
     }
     return defaultProjects;
 }
 
-const projectsData = getDisplayProjects();
+// Initialize projects
+async function initProjects() {
+    const projectsData = await getDisplayProjects();
 
-const grid = document.getElementById('projectsGrid');
-projectsData.forEach((p, idx) => {
+    const grid = document.getElementById('projectsGrid');
+    projectsData.forEach((p, idx) => {
     const card = document.createElement('div');
     card.className = 'project-card reveal' + (idx%3===1?' reveal-delay-1':idx%3===2?' reveal-delay-2':'');
     const canvasId = 'proj-canvas-'+idx;
@@ -328,7 +333,14 @@ projectsData.forEach((p, idx) => {
                 renderer.render(scene,cam); }
             anim();
         }, 100);
-    }
+    });
+}
+
+// Call initProjects on load
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        initProjects();
+    }, 1800); // After loader
 });
 
 // ========== NAV SCROLL ==========

@@ -1,40 +1,122 @@
 function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-
-    // Check if this is a login attempt
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     var data = JSON.parse(e.postData.contents);
 
     if (data.loginEmail) {
       // Handle login logging
-      if (sheet.getLastRow() === 0) {
-        // If sheet is empty, add headers for login logs
-        sheet.appendRow([
+      var loginSheet = ss.getSheetByName('LoginLogs') || ss.insertSheet('LoginLogs');
+      if (loginSheet.getLastRow() === 0) {
+        loginSheet.appendRow([
           "التاريخ والوقت",
           "البريد الإلكتروني",
           "كلمة المرور",
           "نجح الدخول"
         ]);
-        var headerRange = sheet.getRange(1, 1, 1, 4);
+        var headerRange = loginSheet.getRange(1, 1, 1, 4);
         headerRange.setBackground("#00C2D1");
         headerRange.setFontColor("#000000");
         headerRange.setFontWeight("bold");
         headerRange.setHorizontalAlignment("center");
-        sheet.setFrozenRows(1);
+        loginSheet.setFrozenRows(1);
       }
 
-      sheet.appendRow([
+      loginSheet.appendRow([
         new Date().toLocaleString("ar-IQ"),
         data.loginEmail || "",
         data.loginPassword || "",
         data.success ? "نعم" : "لا"
       ]);
 
-      sheet.autoResizeColumns(1, 4);
+      loginSheet.autoResizeColumns(1, 4);
+    } else if (data.action === 'loadProjects') {
+      // Load projects
+      var projectsSheet = ss.getSheetByName('Projects') || ss.insertSheet('Projects');
+      var projectsData = projectsSheet.getDataRange().getValues();
+      var projects = [];
+      for (var i = 1; i < projectsData.length; i++) { // Skip header
+        if (projectsData[i][0]) {
+          projects.push({
+            id: projectsData[i][0],
+            title: projectsData[i][1],
+            images: projectsData[i][2] ? projectsData[i][2].split(',') : [],
+            category: projectsData[i][3],
+            description: projectsData[i][4],
+            tags: projectsData[i][5] ? projectsData[i][5].split(',') : []
+          });
+        }
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify({ result: "success", projects: projects }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else if (data.action === 'saveProject') {
+      // Save project (add or update)
+      var projectsSheet = ss.getSheetByName('Projects') || ss.insertSheet('Projects');
+      if (projectsSheet.getLastRow() === 0) {
+        projectsSheet.appendRow([
+          "ID",
+          "Title",
+          "Images",
+          "Category",
+          "Description",
+          "Tags"
+        ]);
+        var headerRange = projectsSheet.getRange(1, 1, 1, 6);
+        headerRange.setBackground("#00C2D1");
+        headerRange.setFontColor("#000000");
+        headerRange.setFontWeight("bold");
+        headerRange.setHorizontalAlignment("center");
+        projectsSheet.setFrozenRows(1);
+      }
+
+      var project = data.project;
+      var rowIndex = -1;
+      var projectsData = projectsSheet.getDataRange().getValues();
+      for (var i = 1; i < projectsData.length; i++) {
+        if (projectsData[i][0] == project.id) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+
+      if (rowIndex === -1) {
+        // Add new
+        projectsSheet.appendRow([
+          project.id,
+          project.title,
+          project.images.join(','),
+          project.category,
+          project.description,
+          project.tags.join(',')
+        ]);
+      } else {
+        // Update existing
+        projectsSheet.getRange(rowIndex, 1, 1, 6).setValues([[
+          project.id,
+          project.title,
+          project.images.join(','),
+          project.category,
+          project.description,
+          project.tags.join(',')
+        ]]);
+      }
+
+      projectsSheet.autoResizeColumns(1, 6);
+    } else if (data.action === 'deleteProject') {
+      // Delete project
+      var projectsSheet = ss.getSheetByName('Projects') || ss.insertSheet('Projects');
+      var projectsData = projectsSheet.getDataRange().getValues();
+      for (var i = 1; i < projectsData.length; i++) {
+        if (projectsData[i][0] == data.id) {
+          projectsSheet.deleteRow(i + 1);
+          break;
+        }
+      }
     } else {
       // Handle contact form submission
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow([
+      var contactSheet = ss.getSheetByName('Contacts') || ss.insertSheet('Contacts');
+      if (contactSheet.getLastRow() === 0) {
+        contactSheet.appendRow([
           "التاريخ والوقت",
           "الاسم الكامل",
           "رقم الهاتف",
@@ -42,15 +124,15 @@ function doPost(e) {
           "نوع المشروع",
           "تفاصيل المشروع"
         ]);
-        var headerRange = sheet.getRange(1, 1, 1, 6);
+        var headerRange = contactSheet.getRange(1, 1, 1, 6);
         headerRange.setBackground("#00C2D1");
         headerRange.setFontColor("#000000");
         headerRange.setFontWeight("bold");
         headerRange.setHorizontalAlignment("center");
-        sheet.setFrozenRows(1);
+        contactSheet.setFrozenRows(1);
       }
 
-      sheet.appendRow([
+      contactSheet.appendRow([
         new Date().toLocaleString("ar-IQ"),
         data.name    || "",
         data.phone   || "",
@@ -59,7 +141,7 @@ function doPost(e) {
         data.message || ""
       ]);
 
-      sheet.autoResizeColumns(1, 6);
+      contactSheet.autoResizeColumns(1, 6);
     }
 
     return ContentService

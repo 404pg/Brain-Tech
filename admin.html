@@ -588,8 +588,13 @@
     <script>
         const ADMIN_EMAIL = "braintechpg@gmail.com";
         const ADMIN_PASSWORD = "00@Ab0d@00";
-        const LOGIN_LOG_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbzIIchFoXJFbnbExI3rxkj7ABpsHI-k4icZUPsKqPEwS2kKI4Z10aVbgrEYJBRu2LZV4A/exec";
         let currentEditId = null;
+        let projectsCache = [];
+        let autoSaveTimer = null;
+        let hasUnsavedChanges = false;
+        let autoSaveTimer = null;
+        let hasUnsavedChanges = false;
 
         // HELPER: Read files as data URLs
         async function readFilesAsDataURLs(files) {
@@ -603,6 +608,31 @@
             return Promise.all(promises);
         }
 
+        // Auto-save functionality
+        function markUnsavedChanges() {
+            hasUnsavedChanges = true;
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                if (hasUnsavedChanges) {
+                    autoSave();
+                }
+            }, 5000); // Auto-save after 5 seconds of inactivity
+        }
+
+        async function autoSave() {
+            if (!hasUnsavedChanges) return;
+            // Save current form data as draft to localStorage
+            const formData = {
+                title: document.getElementById('projectTitle').value,
+                category: document.getElementById('projectCategory').value,
+                description: document.getElementById('projectDescription').value,
+                tags: document.getElementById('projectTags').value
+            };
+            localStorage.setItem('adminDraft', JSON.stringify(formData));
+            console.log('Draft auto-saved');
+            hasUnsavedChanges = false;
+        }
+
         // LOGIN
         async function loginAdmin() {
             const email = document.getElementById('adminEmail').value.trim();
@@ -611,7 +641,7 @@
 
             // Log the login attempt
             try {
-                await fetch(LOGIN_LOG_URL, {
+                await fetch(API_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
@@ -657,6 +687,21 @@
                 document.getElementById('adminSection').style.display = 'block';
                 loadProjects();
             }
+
+            // Load draft if exists
+            const draft = localStorage.getItem('adminDraft');
+            if (draft) {
+                const data = JSON.parse(draft);
+                document.getElementById('projectTitle').value = data.title || '';
+                document.getElementById('projectCategory').value = data.category || '';
+                document.getElementById('projectDescription').value = data.description || '';
+                document.getElementById('projectTags').value = data.tags || '';
+            }
+
+            // Add auto-save listeners
+            ['projectTitle', 'projectCategory', 'projectDescription', 'projectTags'].forEach(id => {
+                document.getElementById(id).addEventListener('input', markUnsavedChanges);
+            });
         });
 
         // TABS
@@ -667,51 +712,102 @@
             event.target.closest('.tab-btn').classList.add('active');
         }
 
-        // PROJECTS STORAGE
-        function getProjects() {
-            const projects = localStorage.getItem('brainTechProjects');
-            return projects ? JSON.parse(projects) : [];
+        // PROJECTS API
+        async function loadProjects() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'loadProjects' })
+                });
+                const data = await response.json();
+                if (data.result === 'success') {
+                    projectsCache = data.projects;
+                    renderProjects();
+                } else {
+                    console.error('Failed to load projects:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
         }
 
-        function saveProjects(projects) {
-            localStorage.setItem('brainTechProjects', JSON.stringify(projects));
+        async function saveProjectToAPI(project) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'saveProject', project: project })
+                });
+                const data = await response.json();
+                if (data.result === 'success') {
+                    await loadProjects(); // Reload to sync
+                } else {
+                    console.error('Failed to save project:', data.error);
+                }
+            } catch (error) {
+                console.error('Error saving project:', error);
+            }
+        }
+
+        async function deleteProjectFromAPI(id) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'deleteProject', id: id })
+                });
+                const data = await response.json();
+                if (data.result === 'success') {
+                    await loadProjects(); // Reload to sync
+                } else {
+                    console.error('Failed to delete project:', data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting project:', error);
+            }
         }
 
         // ADD PROJECT
         async function addProject(e) {
             e.preventDefault();
             const status = document.getElementById('addStatus');
+            status.className = 'status-msg';
+            status.innerHTML = 'جاري الحفظ...';
+            status.classList.add('show');
 
-            const files = document.getElementById('projectImages').files;
-            const images = await readFilesAsDataURLs(files);
+            try {
+                const files = document.getElementById('projectImages').files;
+                const images = await readFilesAsDataURLs(files);
 
-            const project = {
-                id: Date.now(),
-                title: document.getElementById('projectTitle').value,
-                images: images,
-                category: document.getElementById('projectCategory').value,
-                description: document.getElementById('projectDescription').value,
-                tags: document.getElementById('projectTags').value.split(',').map(t => t.trim()).filter(t => t)
-            };
+                const project = {
+                    id: Date.now(),
+                    title: document.getElementById('projectTitle').value,
+                    images: images,
+                    category: document.getElementById('projectCategory').value,
+                    description: document.getElementById('projectDescription').value,
+                    tags: document.getElementById('projectTags').value.split(',').map(t => t.trim()).filter(t => t)
+                };
 
-            const projects = getProjects();
-            projects.push(project);
-            saveProjects(projects);
+                await saveProjectToAPI(project);
 
-            showStatus(status, 'تم إضافة المشروع بنجاح ✅', 'success');
-            document.getElementById('projectForm').reset();
-            
-            setTimeout(() => {
-                status.classList.remove('show');
-            }, 3000);
+                // Reset form
+                document.getElementById('projectForm').reset();
+                localStorage.removeItem('adminDraft'); // Clear draft
+                status.innerHTML = '✅ تم إضافة المشروع بنجاح!';
+                status.classList.add('success');
+                setTimeout(() => status.classList.remove('show'), 3000);
+            } catch (error) {
+                status.innerHTML = '❌ فشل في إضافة المشروع';
+                status.classList.add('error');
+                console.error(error);
+            }
         }
 
-        // LOAD PROJECTS
-        function loadProjects() {
-            const projects = getProjects();
+        // RENDER PROJECTS
+        function renderProjects() {
             const container = document.getElementById('projectsContainer');
-
-            if (projects.length === 0) {
+            if (projectsCache.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
@@ -721,74 +817,60 @@
                 return;
             }
 
-            let html = `
-                <table class="projects-table">
-                    <thead>
-                        <tr>
-                            <th>الصورة</th>
-                            <th>العنوان</th>
-                            <th>التصنيف</th>
-                            <th>الوصف</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            projects.forEach(project => {
-                const imagesHtml = project.images && project.images.length > 0 
-                    ? project.images.map(img => `<img src="${img}" alt="${project.title}" class="project-img-thumb" style="margin:2px;" onerror="this.src='https://via.placeholder.com/50?text=No+Image'">`).join('')
-                    : '<img src="https://via.placeholder.com/50?text=No+Image" class="project-img-thumb">';
+            let html = '<table class="projects-table"><thead><tr><th>الصورة</th><th>العنوان</th><th>التصنيف</th><th>الإجراءات</th></tr></thead><tbody>';
+            projectsCache.forEach(project => {
+                const imgSrc = project.images.length > 0 ? project.images[0] : '';
                 html += `
                     <tr>
-                        <td>${imagesHtml}</td>
+                        <td><img src="${imgSrc}" alt="${project.title}" class="project-img-thumb"></td>
                         <td>${project.title}</td>
                         <td>${project.category}</td>
-                        <td>${project.description.substring(0, 50)}...</td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-edit" onclick="editProject(${project.id})">
-                                    <i class="fas fa-edit"></i> تعديل
-                                </button>
-                                <button class="btn-delete" onclick="deleteProject(${project.id})">
-                                    <i class="fas fa-trash"></i> حذف
-                                </button>
-                            </div>
+                        <td class="action-btns">
+                            <button class="btn-edit" onclick="editProject(${project.id})"><i class="fas fa-edit"></i> تعديل</button>
+                            <button class="btn-delete" onclick="deleteProject(${project.id})"><i class="fas fa-trash"></i> حذف</button>
                         </td>
                     </tr>
                 `;
             });
-
-            html += `</tbody></table>`;
+            html += '</tbody></table>';
             container.innerHTML = html;
         }
 
         // EDIT PROJECT
         function editProject(id) {
-            const projects = getProjects();
-            const project = projects.find(p => p.id === id);
-            
-            if (project) {
-                currentEditId = id;
-                document.getElementById('editTitle').value = project.title;
-                // Note: File input cannot be pre-filled, user must re-upload
-                document.getElementById('editCategory').value = project.category;
-                document.getElementById('editDescription').value = project.description;
-                document.getElementById('editTags').value = project.tags.join(', ');
-                document.getElementById('editModal').classList.add('open');
-            }
+            const project = projectsCache.find(p => p.id == id);
+            if (!project) return;
+
+            currentEditId = id;
+            document.getElementById('editTitle').value = project.title;
+            document.getElementById('editCategory').value = project.category;
+            document.getElementById('editDescription').value = project.description;
+            document.getElementById('editTags').value = project.tags.join(', ');
+            // Note: Images are not pre-filled for simplicity, user can re-upload
+
+            document.getElementById('editModal').classList.add('open');
         }
 
+        // SAVE EDITED PROJECT
         async function saveProject(e) {
             e.preventDefault();
-            const projects = getProjects();
-            const index = projects.findIndex(p => p.id === currentEditId);
+            const status = document.getElementById('manageStatus');
+            status.className = 'status-msg';
+            status.innerHTML = 'جاري الحفظ...';
+            status.classList.add('show');
 
-            if (index !== -1) {
+            try {
                 const files = document.getElementById('editImages').files;
-                const images = await readFilesAsDataURLs(files);
+                let images = [];
+                if (files.length > 0) {
+                    images = await readFilesAsDataURLs(files);
+                } else {
+                    // Keep existing images if no new files
+                    const existing = projectsCache.find(p => p.id == currentEditId);
+                    images = existing ? existing.images : [];
+                }
 
-                projects[index] = {
+                const project = {
                     id: currentEditId,
                     title: document.getElementById('editTitle').value,
                     images: images,
@@ -797,52 +879,45 @@
                     tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(t => t)
                 };
 
-                saveProjects(projects);
+                await saveProjectToAPI(project);
                 closeModal();
-                loadProjects();
-                const status = document.getElementById('manageStatus');
-                showStatus(status, 'تم تحديث المشروع بنجاح ✅', 'success');
+                status.innerHTML = '✅ تم حفظ التعديلات بنجاح!';
+                status.classList.add('success');
+                setTimeout(() => status.classList.remove('show'), 3000);
+            } catch (error) {
+                status.innerHTML = '❌ فشل في حفظ التعديلات';
+                status.classList.add('error');
+                console.error(error);
             }
         }
 
         // DELETE PROJECT
-        function deleteProject(id) {
-            if (confirm('هل أنت متأكد من حذف هذا المشروع؟')) {
-                let projects = getProjects();
-                projects = projects.filter(p => p.id !== id);
-                saveProjects(projects);
-                loadProjects();
-                const status = document.getElementById('manageStatus');
-                showStatus(status, 'تم حذف المشروع بنجاح ✅', 'success');
+        async function deleteProject(id) {
+            if (!confirm('هل أنت متأكد من حذف هذا المشروع؟')) return;
+
+            const status = document.getElementById('manageStatus');
+            status.className = 'status-msg';
+            status.innerHTML = 'جاري الحذف...';
+            status.classList.add('show');
+
+            try {
+                await deleteProjectFromAPI(id);
+                status.innerHTML = '✅ تم حذف المشروع بنجاح!';
+                status.classList.add('success');
+                setTimeout(() => status.classList.remove('show'), 3000);
+            } catch (error) {
+                status.innerHTML = '❌ فشل في حذف المشروع';
+                status.classList.add('error');
+                console.error(error);
             }
         }
 
-        // MODAL
+        // CLOSE MODAL
         function closeModal() {
             document.getElementById('editModal').classList.remove('open');
+            document.getElementById('editForm').reset();
             currentEditId = null;
         }
-
-        // STATUS MESSAGE
-        function showStatus(element, message, type) {
-            element.textContent = message;
-            element.className = 'status-msg show ' + type;
-        }
-
-        // CLOSE MODAL ON ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // ENTER KEY ON PASSWORD
-        document.addEventListener('DOMContentLoaded', () => {
-            const adminPassword = document.getElementById('adminPassword');
-            if (adminPassword) {
-                adminPassword.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') loginAdmin();
-                });
-            }
-        });
     </script>
 </body>
 </html>
