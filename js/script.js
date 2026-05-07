@@ -1,25 +1,38 @@
-// ========== CURSOR ==========
+// ========== CURSOR (OPTIMIZED) ==========
 const cursor = document.getElementById('cursor');
 const ring = document.getElementById('cursor-ring');
 let mx=0, my=0, rx=0, ry=0;
-document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.style.left = mx+'px'; cursor.style.top = my+'px'; });
-(function animRing() { rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12; ring.style.left = rx+'px'; ring.style.top = ry+'px'; requestAnimationFrame(animRing); })();
+let lastUpdateTime = 0;
+document.addEventListener('mousemove', e => { 
+    const now = Date.now();
+    if (now - lastUpdateTime > 16) { // Throttle to ~60fps
+        mx = e.clientX; my = e.clientY; 
+        cursor.style.left = mx+'px'; cursor.style.top = my+'px'; 
+        lastUpdateTime = now;
+    }
+});
+(function animRing() { 
+    rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12; 
+    ring.style.left = rx+'px'; ring.style.top = ry+'px'; 
+    requestAnimationFrame(animRing); 
+})();
 document.querySelectorAll('a,button,.service-card,.project-card,.why-item,.test-card').forEach(el => {
     el.addEventListener('mouseenter', () => { cursor.style.width='20px'; cursor.style.height='20px'; ring.style.width='60px'; ring.style.height='60px'; ring.style.opacity='0.8'; });
     el.addEventListener('mouseleave', () => { cursor.style.width='12px'; cursor.style.height='12px'; ring.style.width='40px'; ring.style.height='40px'; ring.style.opacity='0.5'; });
 });
 
-// ========== LOADER + 3D SPINNING BRAIN ==========
+// ========== LOADER + 3D SPINNING BRAIN (OPTIMIZED) ==========
+let loaderDone = false;
 (function initLoader() {
     const c = document.getElementById('loader-canvas');
     c.width = 200; c.height = 200;
-    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: false }); // Disabled antialias
     renderer.setSize(200, 200);
     renderer.setClearColor(0x000000, 0);
     const scene = new THREE.Scene();
     const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     cam.position.z = 3;
-    const geo = new THREE.IcosahedronGeometry(1, 1);
+    const geo = new THREE.IcosahedronGeometry(1, 0); // Reduced segments
     const mat = new THREE.MeshStandardMaterial({ color: 0x00C2D1, wireframe: true, emissive: 0x003344 });
     const mesh = new THREE.Mesh(geo, mat);
     scene.add(mesh);
@@ -28,7 +41,13 @@ document.querySelectorAll('a,button,.service-card,.project-card,.why-item,.test-
     pl.position.set(2,2,2);
     scene.add(pl);
     let t = 0;
-    function animLoader() { t+=0.02; mesh.rotation.x=t*0.7; mesh.rotation.y=t; renderer.render(scene, cam); requestAnimationFrame(animLoader); }
+    function animLoader() { 
+        if (!loaderDone) {
+            t+=0.02; mesh.rotation.x=t*0.7; mesh.rotation.y=t; 
+            renderer.render(scene, cam); 
+            requestAnimationFrame(animLoader);
+        }
+    }
     animLoader();
 })();
 window.addEventListener('load', () => {
@@ -41,10 +60,10 @@ window.addEventListener('load', () => {
     }, 1800);
 });
 
-// ========== HERO THREE.JS (Neural Network) ==========
+// ========== HERO THREE.JS (Neural Network - OPTIMIZED) ==========
 (function initHero() {
     const c = document.getElementById('hero-canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: false }); // Disable antialias for perf
     const W = () => c.parentElement.offsetWidth;
     const H = () => c.parentElement.offsetHeight;
     renderer.setSize(W(), H());
@@ -53,28 +72,29 @@ window.addEventListener('load', () => {
     const cam = new THREE.PerspectiveCamera(60, W()/H(), 0.1, 1000);
     cam.position.z = 30;
 
-    // Nodes
-    const nodes = [], nodeGeo = new THREE.SphereGeometry(0.18, 8, 8);
+    // Nodes - REDUCED from 80 to 40 for better performance
+    const nodes = [], nodeGeo = new THREE.SphereGeometry(0.18, 6, 6); // Reduced segments
     const nodeMat = new THREE.MeshBasicMaterial({ color: 0x00C2D1 });
-    for(let i=0;i<80;i++){
+    for(let i=0;i<40;i++){ // Reduced node count
         const m = new THREE.Mesh(nodeGeo, nodeMat.clone());
         m.position.set((Math.random()-0.5)*60,(Math.random()-0.5)*40,(Math.random()-0.5)*20);
         m.userData = { vx:(Math.random()-0.5)*0.03, vy:(Math.random()-0.5)*0.03, vz:(Math.random()-0.5)*0.015 };
         scene.add(m); nodes.push(m);
     }
 
-    // Lines
+    // Lines - OPTIMIZED with limited connections
     const lineMat = new THREE.LineBasicMaterial({ color: 0x00C2D1, transparent: true, opacity: 0.12 });
     const lineGeo = new THREE.BufferGeometry();
-    let linePositions = new Float32Array(nodes.length * nodes.length * 6);
+    // Only allocate space for realistic line count (avoid O(n²) worst case)
+    let linePositions = new Float32Array(40 * 6 * 3); // Max connections per node
     lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
     const lineObj = new THREE.LineSegments(lineGeo, lineMat);
     scene.add(lineObj);
 
-    // Stars bg
+    // Stars bg - REDUCED from 2000 to 800
     const starGeo = new THREE.BufferGeometry();
-    const starPos = new Float32Array(2000*3);
-    for(let i=0;i<2000*3;i++) starPos[i]=(Math.random()-0.5)*300;
+    const starPos = new Float32Array(800*3);
+    for(let i=0;i<800*3;i++) starPos[i]=(Math.random()-0.5)*300;
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
     const starMat = new THREE.PointsMaterial({ color: 0x445566, size: 0.3 });
     scene.add(new THREE.Points(starGeo, starMat));
@@ -86,6 +106,7 @@ window.addEventListener('load', () => {
     function animHero() {
         requestAnimationFrame(animHero);
         frame++;
+        
         // Move nodes
         nodes.forEach(n => {
             n.position.x += n.userData.vx;
@@ -95,34 +116,48 @@ window.addEventListener('load', () => {
             if(Math.abs(n.position.y)>20){n.userData.vy*=-1;}
             if(Math.abs(n.position.z)>10){n.userData.vz*=-1;}
         });
-        // Update lines
-        let idx=0; const posArr = lineGeo.attributes.position.array;
-        for(let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++){
-            const d = nodes[i].position.distanceTo(nodes[j].position);
-            if(d<12){
-                posArr[idx++]=nodes[i].position.x; posArr[idx++]=nodes[i].position.y; posArr[idx++]=nodes[i].position.z;
-                posArr[idx++]=nodes[j].position.x; posArr[idx++]=nodes[j].position.y; posArr[idx++]=nodes[j].position.z;
+        
+        // Update lines - OPTIMIZED with distance threshold
+        let idx=0; 
+        const posArr = lineGeo.attributes.position.array;
+        const maxDist = 12;
+        
+        // Only check nearby nodes (spatial optimization)
+        for(let i=0;i<nodes.length;i++) {
+            let connectionCount = 0;
+            for(let j=i+1;j<nodes.length && connectionCount < 3;j++){ // Max 3 connections per node
+                const d = nodes[i].position.distanceTo(nodes[j].position);
+                if(d < maxDist){
+                    posArr[idx++]=nodes[i].position.x; posArr[idx++]=nodes[i].position.y; posArr[idx++]=nodes[i].position.z;
+                    posArr[idx++]=nodes[j].position.x; posArr[idx++]=nodes[j].position.y; posArr[idx++]=nodes[j].position.z;
+                    connectionCount++;
+                }
             }
         }
+        
+        // Clear remaining
         for(;idx<posArr.length;idx++) posArr[idx]=0;
         lineGeo.attributes.position.needsUpdate = true;
-        // Camera parallax
-        cam.position.x += (mouseX*3 - cam.position.x) * 0.03;
-        cam.position.y += (mouseY*2 - cam.position.y) * 0.03;
-        cam.lookAt(scene.position);
+        
+        // Camera parallax - only update every 2 frames
+        if(frame % 2 === 0) {
+            cam.position.x += (mouseX*3 - cam.position.x) * 0.03;
+            cam.position.y += (mouseY*2 - cam.position.y) * 0.03;
+            cam.lookAt(scene.position);
+        }
         renderer.render(scene, cam);
     }
     animHero();
     window.addEventListener('resize', () => { renderer.setSize(W(),H()); cam.aspect=W()/H(); cam.updateProjectionMatrix(); });
 })();
 
-// ========== WHY-US 3D PCB Spin ==========
+// ========== WHY-US 3D PCB Spin (OPTIMIZED) ==========
 (function initWhyCanvas() {
     const c = document.getElementById('why-canvas');
     const wrap = document.getElementById('why-canvas-wrap');
     c.width = wrap.offsetWidth || 500;
     c.height = 380;
-    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: false }); // Disabled antialias
     renderer.setSize(c.width, c.height);
     renderer.setClearColor(0x000000, 0);
     const scene = new THREE.Scene();
@@ -139,24 +174,24 @@ window.addEventListener('load', () => {
         new THREE.MeshStandardMaterial({ color: 0x0a3020, roughness: 0.5, metalness: 0.1 })
     );
     group.add(board);
-    // Traces
-    for(let i=0;i<12;i++){
+    // Traces - REDUCED from 12+10 to 8+6
+    for(let i=0;i<8;i++){
         const tGeo = new THREE.BoxGeometry(0.05, Math.random()*1.5+0.3, 0.15);
         const tMat = new THREE.MeshStandardMaterial({ color: 0xCCB000, emissive: 0x443300, roughness: 0.3, metalness: 0.9 });
         const t = new THREE.Mesh(tGeo, tMat);
         t.position.set((Math.random()-0.5)*3.5,(Math.random()-0.5)*2.5,0.06);
         group.add(t);
     }
-    for(let i=0;i<10;i++){
+    for(let i=0;i<6;i++){ // Reduced from 10 to 6
         const tGeo = new THREE.BoxGeometry(Math.random()*1.5+0.3, 0.05, 0.15);
         const tMat = new THREE.MeshStandardMaterial({ color: 0xCCB000, roughness: 0.3, metalness: 0.9 });
         const t = new THREE.Mesh(tGeo, tMat);
         t.position.set((Math.random()-0.5)*3.5,(Math.random()-0.5)*2.5,0.06);
         group.add(t);
     }
-    // Components
+    // Components - REDUCED from 15 to 10
     const colors = [0x00C2D1, 0xff4455, 0x44ddaa, 0xffaa00];
-    for(let i=0;i<15;i++){
+    for(let i=0;i<10;i++){ // Reduced from 15
         const g = new THREE.BoxGeometry(0.15+Math.random()*0.25,0.15+Math.random()*0.25,0.2);
         const m = new THREE.MeshStandardMaterial({ color: colors[i%4], roughness:0.4, metalness:0.6, emissive: colors[i%4], emissiveIntensity:0.2 });
         const comp = new THREE.Mesh(g,m);
@@ -183,13 +218,13 @@ window.addEventListener('load', () => {
     anim();
 })();
 
-// ========== CTA 3D PARTICLES ==========
+// ========== CTA 3D PARTICLES (OPTIMIZED) ==========
 (function initCTA() {
     const c = document.getElementById('cta-canvas');
     const sec = c.parentElement;
     c.width = sec.offsetWidth; c.height = sec.offsetHeight;
     c.style.position='absolute'; c.style.inset='0'; c.style.pointerEvents='none';
-    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: false }); // Disabled antialias
     renderer.setSize(c.width, c.height);
     renderer.setClearColor(0x000000, 0);
     const scene = new THREE.Scene();
@@ -197,8 +232,8 @@ window.addEventListener('load', () => {
     cam.position.z = 15;
     const pts = [];
     const geo = new THREE.BufferGeometry();
-    const pos = new Float32Array(500*3);
-    for(let i=0;i<500*3;i++) pos[i]=(Math.random()-0.5)*30;
+    const pos = new Float32Array(250*3); // Reduced from 500 to 250
+    for(let i=0;i<250*3;i++) pos[i]=(Math.random()-0.5)*30;
     geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
     const pts3 = new THREE.Points(geo, new THREE.PointsMaterial({color:0x00C2D1,size:0.1,transparent:true,opacity:0.6}));
     scene.add(pts3);
@@ -206,13 +241,25 @@ window.addEventListener('load', () => {
     anim();
 })();
 
-// ========== GLOBAL PARTICLES ==========
+// ========== GLOBAL PARTICLES (OPTIMIZED) ==========
 (function initParticles() {
     const c = document.getElementById('particles-canvas');
     c.width = window.innerWidth; c.height = window.innerHeight;
     const ctx = c.getContext('2d');
-    const particles = Array.from({length:60}, () => ({ x:Math.random()*c.width, y:Math.random()*c.height, r:Math.random()*1.5+0.5, vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3, a:Math.random() }));
+    // Reduced from 60 to 30 particles
+    const particles = Array.from({length:30}, () => ({ 
+        x:Math.random()*c.width, 
+        y:Math.random()*c.height, 
+        r:Math.random()*1.5+0.5, 
+        vx:(Math.random()-0.5)*0.2, // Reduced velocity
+        vy:(Math.random()-0.5)*0.2, 
+        a:Math.random() 
+    }));
+    
+    let animationRunning = true;
+    
     function draw(){
+        if (!animationRunning) return;
         ctx.clearRect(0,0,c.width,c.height);
         particles.forEach(p => {
             p.x+=p.vx; p.y+=p.vy;
@@ -224,7 +271,14 @@ window.addEventListener('load', () => {
         requestAnimationFrame(draw);
     }
     draw();
+    
     window.addEventListener('resize',()=>{ c.width=window.innerWidth; c.height=window.innerHeight; });
+    
+    // Stop particles animation when not visible
+    document.addEventListener('visibilitychange', () => {
+        animationRunning = !document.hidden;
+        if (animationRunning) draw();
+    });
 })();
 
 // ========== PROJECTS 3D PREVIEWS ==========
@@ -317,7 +371,7 @@ async function initProjects() {
             if (!c) return;
             c.width = c.offsetWidth || 320;
             c.height = 200;
-            const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true });
+            const renderer = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: false }); // Disabled antialias
             renderer.setSize(c.width, 200);
             renderer.setClearColor(0x000000, 0);
             const scene = new THREE.Scene();
@@ -338,10 +392,10 @@ async function initProjects() {
             const mat = new THREE.MeshStandardMaterial({ color: p.color, wireframe: true, emissive: p.color, emissiveIntensity: 0.3 });
             const mesh = new THREE.Mesh(shapes[idx % shapes.length], mat);
             scene.add(mesh);
-            // Orbit particles
+            // Orbit particles - REDUCED from 50 to 30
             const orbitGeo = new THREE.BufferGeometry();
-            const orbitPos = new Float32Array(50 * 3);
-            for (let i = 0; i < 50; i++) {
+            const orbitPos = new Float32Array(30 * 3); // Reduced
+            for (let i = 0; i < 30; i++) {
                 const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 1;
                 orbitPos[i * 3] = Math.cos(a) * r;
                 orbitPos[i * 3 + 1] = (Math.random() - 0.5) * 2;
