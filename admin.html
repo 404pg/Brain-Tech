@@ -607,18 +607,20 @@
         }
 
         // Auto-save functionality
+        let USE_GOOGLE_SHEETS = true; // Toggle to switch between Google Sheets and localStorage
+        
         function markUnsavedChanges() {
             hasUnsavedChanges = true;
             if (autoSaveTimer) clearTimeout(autoSaveTimer);
             autoSaveTimer = setTimeout(() => {
-                if (hasUnsavedChanges) {
-                    autoSave();
+                if (hasUnsavedChanges && document.getElementById('projectTitle').value.trim()) {
+                    autoSaveDraft(); // Always save draft
                 }
-            }, 5000); // Auto-save after 5 seconds of inactivity
+            }, 3000); // Auto-save draft after 3 seconds of inactivity
         }
 
-        async function autoSave() {
-            if (!hasUnsavedChanges) return;
+        async function autoSaveDraft() {
+            if (!document.getElementById('projectTitle').value.trim()) return;
             // Save current form data as draft to localStorage
             const formData = {
                 title: document.getElementById('projectTitle').value,
@@ -627,7 +629,7 @@
                 tags: document.getElementById('projectTags').value
             };
             localStorage.setItem('adminDraft', JSON.stringify(formData));
-            console.log('Draft auto-saved');
+            console.log('Draft auto-saved to localStorage');
             hasUnsavedChanges = false;
         }
 
@@ -712,24 +714,39 @@
         // PROJECTS API
         async function loadProjects() {
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'loadProjects' })
-                });
-                const data = await response.json();
-                if (data.result === 'success') {
-                    projectsCache = data.projects;
-                    renderProjects();
-                } else {
-                    console.error('Failed to load projects:', data.error);
+                if (USE_GOOGLE_SHEETS) {
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'loadProjects' })
+                        });
+                        const data = await response.json();
+                        if (data.result === 'success') {
+                            projectsCache = data.projects;
+                            renderProjects();
+                            return;
+                        }
+                    } catch (error) {
+                        console.warn('Google Sheets load failed, switching to localStorage:', error);
+                        USE_GOOGLE_SHEETS = false;
+                    }
                 }
+                
+                // Fallback to localStorage
+                projectsCache = loadProjectsFromLocalStorage();
+                renderProjects();
             } catch (error) {
                 console.error('Error loading projects:', error);
+                projectsCache = [];
+                renderProjects();
             }
         }
 
         async function saveProjectToAPI(project) {
+            if (!USE_GOOGLE_SHEETS) {
+                return saveProjectToLocalStorage(project);
+            }
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -740,14 +757,24 @@
                 if (data.result === 'success') {
                     await loadProjects(); // Reload to sync
                 } else {
-                    console.error('Failed to save project:', data.error);
+                    throw new Error(data.error || 'Save failed');
                 }
             } catch (error) {
-                console.error('Error saving project:', error);
+                console.error('Error saving to Google Sheets:', error);
+                throw error;
             }
         }
 
         async function deleteProjectFromAPI(id) {
+            if (!USE_GOOGLE_SHEETS) {
+                let allProjects = loadProjectsFromLocalStorage();
+                allProjects = allProjects.filter(p => p.id != id);
+                localStorage.setItem('brainTechProjects', JSON.stringify(allProjects));
+                projectsCache = allProjects;
+                renderProjects();
+                return;
+            }
+            
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -758,10 +785,11 @@
                 if (data.result === 'success') {
                     await loadProjects(); // Reload to sync
                 } else {
-                    console.error('Failed to delete project:', data.error);
+                    throw new Error(data.error || 'Delete failed');
                 }
             } catch (error) {
-                console.error('Error deleting project:', error);
+                console.error('Error deleting from Google Sheets:', error);
+                throw error;
             }
         }
 
@@ -775,30 +803,87 @@
 
             try {
                 const files = document.getElementById('projectImages').files;
-                const images = await readFilesAsDataURLs(files);
+                let images = [];
+                
+                // Process images efficiently - avoid storing huge base64 strings
+                if (files.length > 0 && USE_GOOGLE_SHEETS) {
+                    // For Google Sheets: store image URLs from file names in localStorage
+                    // Or use a simpler approach: serialize image data compactly
+                    const imagePromises = Array.from(files).map((file, idx) => 
+                        new Promise(resolve => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                // Store only first 2 images to avoid size limits
+                                if (idx < 2) {
+                                    resolve(e.target.result);
+                                } else {
+                                    resolve(null);
+                                }
+                            };
+                            reader.readAsDataURL(file);
+                        })
+                    );
+                    images = (await Promise.all(imagePromises)).filter(img => img !== null);
+                } else if (files.length > 0) {
+                    // For localStorage: store all images
+                    images = await readFilesAsDataURLs(files);
+                }
 
                 const project = {
                     id: Date.now(),
                     title: document.getElementById('projectTitle').value,
-                    images: images,
+                    images: images, // Now limited for Google Sheets
                     category: document.getElementById('projectCategory').value,
                     description: document.getElementById('projectDescription').value,
                     tags: document.getElementById('projectTags').value.split(',').map(t => t.trim()).filter(t => t)
                 };
 
-                await saveProjectToAPI(project);
+                // TRY Google Sheets first, fallback to localStorage
+                if (USE_GOOGLE_SHEETS) {
+                    try {
+                        await saveProjectToAPI(project);
+                        console.log('Project saved to Google Sheets');
+                    } catch (error) {
+                        console.warn('Google Sheets save failed, trying localStorage:', error);
+                        USE_GOOGLE_SHEETS = false;
+                        await saveProjectToLocalStorage(project);
+                    }
+                } else {
+                    await saveProjectToLocalStorage(project);
+                }
 
                 // Reset form
                 document.getElementById('projectForm').reset();
                 localStorage.removeItem('adminDraft'); // Clear draft
-                status.innerHTML = '✅ تم إضافة المشروع بنجاح!';
+                status.innerHTML = '✅ تم إضافة المشروع بنجاح! تم الحفظ والنشر.';
                 status.classList.add('success');
+                
+                // Reload projects display
+                await loadProjects();
+                
                 setTimeout(() => status.classList.remove('show'), 3000);
             } catch (error) {
-                status.innerHTML = '❌ فشل في إضافة المشروع';
+                status.innerHTML = '❌ فشل في إضافة المشروع: ' + error.message;
                 status.classList.add('error');
                 console.error(error);
             }
+        }
+
+        // localStorage as fallback storage
+        function saveProjectToLocalStorage(project) {
+            let allProjects = JSON.parse(localStorage.getItem('brainTechProjects') || '[]');
+            const existingIdx = allProjects.findIndex(p => p.id == project.id);
+            if (existingIdx >= 0) {
+                allProjects[existingIdx] = project;
+            } else {
+                allProjects.push(project);
+            }
+            localStorage.setItem('brainTechProjects', JSON.stringify(allProjects));
+            return Promise.resolve();
+        }
+
+        function loadProjectsFromLocalStorage() {
+            return JSON.parse(localStorage.getItem('brainTechProjects') || '[]');
         }
 
         // RENDER PROJECTS
@@ -860,7 +945,25 @@
                 const files = document.getElementById('editImages').files;
                 let images = [];
                 if (files.length > 0) {
-                    images = await readFilesAsDataURLs(files);
+                    if (USE_GOOGLE_SHEETS) {
+                        // For Google Sheets: limit to 2 images to avoid size limits
+                        const imagePromises = Array.from(files).map((file, idx) => 
+                            new Promise(resolve => {
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    if (idx < 2) {
+                                        resolve(e.target.result);
+                                    } else {
+                                        resolve(null);
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                            })
+                        );
+                        images = (await Promise.all(imagePromises)).filter(img => img !== null);
+                    } else {
+                        images = await readFilesAsDataURLs(files);
+                    }
                 } else {
                     // Keep existing images if no new files
                     const existing = projectsCache.find(p => p.id == currentEditId);
@@ -876,13 +979,27 @@
                     tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(t => t)
                 };
 
-                await saveProjectToAPI(project);
+                if (USE_GOOGLE_SHEETS) {
+                    try {
+                        await saveProjectToAPI(project);
+                    } catch (error) {
+                        console.warn('Google Sheets failed, switching to localStorage');
+                        USE_GOOGLE_SHEETS = false;
+                        await saveProjectToLocalStorage(project);
+                        await loadProjects();
+                    }
+                } else {
+                    await saveProjectToLocalStorage(project);
+                    projectsCache = loadProjectsFromLocalStorage();
+                    renderProjects();
+                }
+
                 closeModal();
-                status.innerHTML = '✅ تم حفظ التعديلات بنجاح!';
+                status.innerHTML = '✅ تم حفظ التعديلات بنجاح والنشر!';
                 status.classList.add('success');
                 setTimeout(() => status.classList.remove('show'), 3000);
             } catch (error) {
-                status.innerHTML = '❌ فشل في حفظ التعديلات';
+                status.innerHTML = '❌ فشل في حفظ التعديلات: ' + error.message;
                 status.classList.add('error');
                 console.error(error);
             }

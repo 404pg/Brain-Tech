@@ -241,6 +241,7 @@ const defaultProjects = [
 // Get projects from admin panel or use defaults
 async function getDisplayProjects() {
     try {
+        // First try Google Sheets
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -253,12 +254,30 @@ async function getDisplayProjects() {
                 tags: p.tags || [],
                 desc: p.description || p.desc,
                 color: 0x00C2D1,
-                images: p.images || (p.image ? [p.image] : [])
+                images: (p.images && Array.isArray(p.images)) ? p.images : (p.images ? [p.images] : [])
             }));
         }
     } catch (e) {
-        console.log('Failed to load projects from API, using defaults:', e);
+        console.log('Failed to load projects from Google Sheets, trying localStorage:', e);
     }
+    
+    // Fallback to localStorage
+    try {
+        const localProjects = JSON.parse(localStorage.getItem('brainTechProjects') || '[]');
+        if (localProjects.length > 0) {
+            console.log('Loaded projects from localStorage');
+            return localProjects.map(p => ({
+                title: p.title,
+                tags: p.tags || [],
+                desc: p.description,
+                color: 0x00C2D1,
+                images: p.images || []
+            }));
+        }
+    } catch (e) {
+        console.log('localStorage fallback failed:', e);
+    }
+    
     return defaultProjects;
 }
 
@@ -267,6 +286,7 @@ async function initProjects() {
     const projectsData = await getDisplayProjects();
 
     const grid = document.getElementById('projectsGrid');
+    grid.innerHTML = ''; // Clear existing
     projectsData.forEach((p, idx) => {
     const card = document.createElement('div');
     card.className = 'project-card reveal' + (idx%3===1?' reveal-delay-1':idx%3===2?' reveal-delay-2':'');
@@ -343,10 +363,26 @@ async function initProjects() {
     });
 }
 
+// Periodic refresh of projects (auto-sync with admin changes)
+let projectRefreshInterval = null;
+function startProjectRefresh() {
+    if (projectRefreshInterval) clearInterval(projectRefreshInterval);
+    projectRefreshInterval = setInterval(async () => {
+        const newProjects = await getDisplayProjects();
+        const grid = document.getElementById('projectsGrid');
+        const currentCount = grid.querySelectorAll('.project-card').length;
+        if (newProjects.length !== currentCount) {
+            console.log('Projects updated, refreshing display...');
+            initProjects();
+        }
+    }, 10000); // Check every 10 seconds
+}
+
 // Call initProjects on load
 window.addEventListener('load', () => {
     setTimeout(() => {
         initProjects();
+        startProjectRefresh(); // Start periodic sync
     }, 1800); // After loader
 });
 
