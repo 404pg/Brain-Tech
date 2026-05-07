@@ -516,7 +516,6 @@ document.getElementById('scrollToProjects').onclick = () => document.getElementB
 document.getElementById('startBtn').onclick = () => document.getElementById('contact').scrollIntoView({behavior:'smooth'});
 
 // ========== CONTACT FORM → GOOGLE SHEETS ==========
-const API_URL = "https://script.google.com/macros/s/AKfycbyDbz2_UqkCAF1TJRmT8hMCNly72ZRMeyYURyDE42mmJY8rCn24tmkCH68-1_P0E58L/exec";
 
 function handleForm(e) {
     e.preventDefault();
@@ -539,7 +538,7 @@ function handleForm(e) {
 
     const payload = JSON.stringify({ name, phone, email, project, message });
 
-    fetch(SHEET_URL, {
+    fetch(API_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },

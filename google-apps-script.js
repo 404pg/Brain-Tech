@@ -43,7 +43,7 @@ function doPost(e) {
       loginSheet.autoResizeColumns(1, 4);
     } else if (data.action === 'loadProjects') {
       // Load projects
-      var projectsSheet = ss.getSheetByName('Projects') || ss.insertSheet('Projects');
+      var projectsSheet = ss.getSheetByName('admin & Uploads') || ss.insertSheet('admin & Uploads');
       var projectsData = projectsSheet.getDataRange().getValues();
       var projects = [];
       for (var i = 1; i < projectsData.length; i++) { // Skip header
@@ -64,7 +64,7 @@ function doPost(e) {
       .setHeaders({'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type'});
     } else if (data.action === 'saveProject') {
       // Save project (add or update)
-      var projectsSheet = ss.getSheetByName('Projects') || ss.insertSheet('Projects');
+      var projectsSheet = ss.getSheetByName('admin & Uploads') || ss.insertSheet('admin & Uploads');
       if (projectsSheet.getLastRow() === 0) {
         projectsSheet.appendRow([
           "ID",
@@ -117,7 +117,7 @@ function doPost(e) {
       projectsSheet.autoResizeColumns(1, 6);
     } else if (data.action === 'deleteProject') {
       // Delete project
-      var projectsSheet = ss.getSheetByName('Projects') || ss.insertSheet('Projects');
+      var projectsSheet = ss.getSheetByName('admin & Uploads') || ss.insertSheet('admin & Uploads');
       var projectsData = projectsSheet.getDataRange().getValues();
       for (var i = 1; i < projectsData.length; i++) {
         if (projectsData[i][0] == data.id) {
@@ -127,7 +127,7 @@ function doPost(e) {
       }
     } else {
       // Handle contact form submission
-      var contactSheet = ss.getSheetByName('Contacts') || ss.insertSheet('Contacts');
+      var contactSheet = ss.getSheetByName('Brain Tech Contacts') || ss.insertSheet('Brain Tech Contacts');
       if (contactSheet.getLastRow() === 0) {
         contactSheet.appendRow([
           "التاريخ والوقت",
@@ -175,4 +175,11 @@ function testSetup() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   Logger.log("Sheet name: " + sheet.getName());
   Logger.log("Setup OK!");
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ result: "success", message: "API is working" }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET', 'Access-Control-Allow-Headers': 'Content-Type'});
 }
